@@ -6,3 +6,5 @@ opencv-python
 python-multipart
 joblib
 scikit-learn
+supabase
+pandas
