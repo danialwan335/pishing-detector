@@ -28,7 +28,6 @@ const Navbar = () => {
                 <li className='p-4 hover:text-cyan-400 cursor-pointer transition-colors'><Link to="/scan">Submit Scan</Link></li>
                 <li className='p-4 hover:text-cyan-400 cursor-pointer transition-colors'><Link to="/how-it-works">How It Works</Link></li>
                 <li className='p-4 hover:text-cyan-400 cursor-pointer transition-colors'><Link to="/history">Scan History</Link></li>
-                <li className='p-4 hover:text-cyan-400 cursor-pointer transition-colors'>About</li>
                 <li className='ml-4'>
                     <button
                         onClick={handleScanClick}
@@ -53,7 +52,6 @@ const Navbar = () => {
                     <li className='p-4 border-b border-gray-600'><Link onClick={() => setNav(false)} to="/scan">Submit Scan</Link></li>
                     <li className='p-4 border-b border-gray-600'><Link onClick={() => setNav(false)} to="/how-it-works">How It Works</Link></li>
                     <li className='p-4 border-b border-gray-600'><Link onClick={() => setNav(false)} to="/history">Scan History</Link></li>
-                    <li className='p-4'>About</li>
                     <li className='p-4'>
                         <button
                             onClick={handleScanClick}
