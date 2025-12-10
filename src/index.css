@@ -1,0 +1,8 @@
+/* ignore the unknown at-rule warning for tailwind directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: azure;
+}
