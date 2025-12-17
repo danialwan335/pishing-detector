@@ -20,7 +20,7 @@ const Navbar = () => {
         <div className='flex justify-between items-center h-24 max-w-[1240px] mx-auto px-4 text-white font-sans relative z-50'>
             <Link to="/" className='flex items-center'>
                 <MdSecurity className='text-cyan-400 mr-2' size={30} />
-                <h1 className='w-full text-2xl font-bold text-white'>Pishing Detector </h1>
+                <h1 className='w-full text-2xl font-bold text-white'>PhishNet</h1>
             </Link>
 
             <ul className='hidden md:flex items-center font-medium'>
@@ -45,7 +45,7 @@ const Navbar = () => {
             <div className={nav ? 'fixed left-0 top-0 w-[60%] h-full border-r border-r-gray-900 bg-[#000300] ease-in-out duration-500 z-50' : 'fixed left-[-100%] top-0 h-full ease-in-out duration-500'}>
                 <div className='flex items-center m-4'>
                     <MdSecurity className='text-cyan-400 mr-2' size={30} />
-                    <h1 className='w-full text-2xl font-bold text-white'>Pishing Detector</h1>
+                    <h1 className='w-full text-2xl font-bold text-white'>PhishNet</h1>
                 </div>
                 <ul className='uppercase p-4'>
                     <li className='p-4 border-b border-gray-600'><Link onClick={() => setNav(false)} to="/">Home</Link></li>
