@@ -6,6 +6,7 @@ const ScanPage = () => {
     const [scanType, setScanType] = useState('url'); // 'url', 'qr', 'email'
     const [url, setUrl] = useState('');
     const [emailText, setEmailText] = useState('');
+    const [emailFileName, setEmailFileName] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
@@ -58,6 +59,22 @@ const ScanPage = () => {
             console.log('Email payload:', payload);
             scanApiCall('http://localhost:8000/api/scan/email', JSON.stringify(payload), { 'Content-Type': 'application/json' });
         }
+    };
+
+    const handleEmailFileUpload = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = (e.target?.result || '').toString();
+            setEmailText(text);
+            setEmailFileName(file.name);
+        };
+        reader.onerror = (e) => {
+            console.error('Error reading email file', e);
+        };
+        reader.readAsText(file);
     };
 
     const handleFileUpload = async (event) => {
@@ -172,6 +189,20 @@ const ScanPage = () => {
                                     placeholder="Paste email content here..."
                                     className='bg-black/50 border border-gray-600 rounded-lg text-white p-4 focus:outline-none focus:border-emerald-500 transition-colors resize-none h-48'
                                 />
+                                <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center'>
+                                    <label className='cursor-pointer bg-gray-800/70 border border-gray-700 rounded-lg px-4 py-2 hover:border-emerald-500 transition-colors'>
+                                        <span className='text-sm text-gray-200'>Upload email file (.txt/.eml)</span>
+                                        <input
+                                            type='file'
+                                            accept='.txt,.eml'
+                                            className='hidden'
+                                            onChange={handleEmailFileUpload}
+                                        />
+                                    </label>
+                                    {emailFileName && (
+                                        <p className='text-xs text-gray-400'>Loaded: {emailFileName}</p>
+                                    )}
+                                </div>
                             </>
                         )}
 

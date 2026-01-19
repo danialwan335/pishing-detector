@@ -52,23 +52,6 @@ const Hero = () => {
             Learn How It Works
           </button>
         </div>
-
-        {/* Stats Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-3 w-full gap-8 mt-12 bg-black/30 p-8 rounded-xl backdrop-blur-sm border border-white/5'>
-          <div className='flex flex-col items-center justify-center'>
-            <p className='text-4xl font-bold text-emerald-400 mb-2'>99.8%</p>
-            <p className='text-gray-400 text-sm uppercase tracking-wider'>Detection Accuracy</p>
-          </div>
-          <div className='flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-white/10 pt-6 md:pt-0'>
-            <p className='text-4xl font-bold text-emerald-400 mb-2'>&lt;2s</p>
-            <p className='text-gray-400 text-sm uppercase tracking-wider'>Average Scan Time</p>
-          </div>
-          <div className='flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-white/10 pt-6 md:pt-0'>
-            <p className='text-4xl font-bold text-emerald-400 mb-2'>500K+</p>
-            <p className='text-gray-400 text-sm uppercase tracking-wider'>Scans Completed</p>
-          </div>
-        </div>
-
       </div>
     </div>
   );

@@ -15,12 +15,17 @@ const ScanHistory = () => {
         try {
             const response = await fetch('http://localhost:8000/api/history'); // Adjust if backend URL differs
             if (!response.ok) {
-                throw new Error('Failed to fetch history');
+                console.warn('History fetch returned non-OK status');
+                setHistory([]);
+                setError(null);
+                return;
             }
             const data = await response.json();
-            setHistory(data);
+            setHistory(Array.isArray(data) ? data : []);
         } catch (err) {
-            setError(err.message);
+            console.warn('History fetch failed, showing empty list instead:', err);
+            setHistory([]);
+            setError(null);
         } finally {
             setLoading(false);
         }
@@ -42,8 +47,6 @@ const ScanHistory = () => {
 
                 {loading ? (
                     <div className='text-center py-20 text-gray-500'>Loading history...</div>
-                ) : error ? (
-                    <div className='text-center py-20 text-red-500'>Error: {error}</div>
                 ) : history.length === 0 ? (
                     <div className='text-center py-20 text-gray-500'>No scan history found yet.</div>
                 ) : (

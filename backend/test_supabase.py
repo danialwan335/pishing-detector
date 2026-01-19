@@ -1,9 +1,6 @@
 import os
 from supabase import create_client, Client
 
-# Supabase Configuration
-SUPABASE_URL = "https://lzncmebhvthpmantdwbq.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6bmNtZWJodnRocG1hbnRkd2JxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMjcxNzUsImV4cCI6MjA4MDkwMzE3NX0.xSPvU2LPDOLVN9RocBxMdeMVK3aFE7R13L37n6tD5wM"
 
 def test_connection():
     try:

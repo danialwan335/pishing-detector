@@ -5,16 +5,18 @@ import Hero from './components/Hero';
 import HowItWork from './components/HowItWork';
 import ScanPage from './components/ScanPage';
 import ScanHistory from './components/ScanHistory';
+import Dashboard from './components/Dashboard';
 
 function App() {
   return (
     <Router>
-      <div className='bg-black h-screen overflow-x-hidden'>
+      <div className='bg-black min-h-screen overflow-x-hidden'>
         <Routes>
           <Route path="/" element={
             <>
               <Navbar />
               <Hero />
+              <Dashboard />
             </>
           } />
           <Route path="/scan" element={<ScanPage />} />

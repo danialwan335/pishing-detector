@@ -8,12 +8,23 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
+import requests
+from bs4 import BeautifulSoup
+from collections import Counter
+from urllib.parse import urlparse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Pishing Detector API")
 
-# Supabase Configuration
-SUPABASE_URL = "https://lzncmebhvthpmantdwbq.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6bmNtZWJodnRocG1hbnRkd2JxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMjcxNzUsImV4cCI6MjA4MDkwMzE3NX0.xSPvU2LPDOLVN9RocBxMdeMVK3aFE7R13L37n6tD5wM"
+# Supabase Configuration (set via environment variables)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise RuntimeError("Supabase credentials not configured. Set SUPABASE_URL and SUPABASE_KEY environment variables.")
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Load Model
@@ -34,6 +45,172 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# NewsAPI Configuration - Add your NewsAPI key here
+NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")  # Set environment variable or update this
+
+def fetch_openphish_trends():
+    """Fetch trending phishing targets from OpenPhish"""
+    try:
+        # Preferred: derive top targeted domains from the OpenPhish feed
+        feed = requests.get(
+            'https://openphish.com/feed.txt',
+            headers={"User-Agent": "Mozilla/5.0 (compatible; PhishDashboard/1.0)"},
+            timeout=10,
+        )
+        feed.raise_for_status()
+
+        domains = []
+        for line in feed.text.splitlines():
+            url = line.strip()
+            if not url:
+                continue
+            parsed = urlparse(url)
+            if parsed.netloc:
+                domains.append(parsed.netloc.lower())
+
+        top_counts = Counter(domains).most_common(10)
+        trends = [
+            {"rank": str(idx + 1), "target": domain, "count": str(count)}
+            for idx, (domain, count) in enumerate(top_counts)
+        ]
+
+        # Fallback: try scraping the homepage table if feed fails or is empty
+        if not trends:
+            response = requests.get(
+                'https://openphish.com/',
+                headers={"User-Agent": "Mozilla/5.0 (compatible; PhishDashboard/1.0)"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            tables = soup.find_all('table')
+            if tables:
+                rows = tables[0].find_all('tr')[1:11]
+                for row in rows:
+                    cols = row.find_all('td')
+                    if len(cols) >= 2:
+                        trends.append({
+                            'rank': cols[0].text.strip() or 'N/A',
+                            'target': cols[1].text.strip(),
+                            'count': cols[2].text.strip() if len(cols) > 2 else 'N/A'
+                        })
+
+        return trends if trends else [{'message': 'Unable to fetch trends from OpenPhish (feed/table empty)'}]
+    except Exception as e:
+        print(f"Error fetching OpenPhish trends: {e}")
+        return [{'message': 'Unable to fetch trends from OpenPhish. Please try again later.'}]
+
+def fetch_phishtank_links():
+    """Fetch top phishing links from PhishTank"""
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; PhishDashboard/1.0)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+
+        links = []
+
+        def try_rss(url: str):
+            try:
+                resp = requests.get(url, headers=headers, timeout=10)
+                resp.raise_for_status()
+                soup = BeautifulSoup(resp.content, 'xml')
+                items = soup.find_all('item')[:10]
+                local_links = []
+                for item in items:
+                    title = item.find('title')
+                    link = item.find('link')
+                    pubDate = item.find('pubDate')
+                    if title and link:
+                        local_links.append({
+                            'title': title.string,
+                            'url': link.string,
+                            'date': pubDate.string if pubDate else 'N/A'
+                        })
+                return local_links
+            except Exception as rss_err:
+                print(f"PhishTank RSS fetch failed ({url}): {rss_err}")
+                return []
+
+        # Try HTTPS RSS, then HTTP RSS as fallback
+        links = try_rss('https://www.phishtank.com/phish_rss.php')
+        if not links:
+            links = try_rss('http://www.phishtank.com/phish_rss.php')
+
+        # Fallback: scrape HTML search results if RSS empty
+        if not links:
+            try:
+                html_resp = requests.get(
+                    'https://www.phishtank.com/phish_search.php?verified=u&valid=u&active=y&Search=Search',
+                    headers=headers,
+                    timeout=10,
+                )
+                html_resp.raise_for_status()
+                html_soup = BeautifulSoup(html_resp.content, 'html.parser')
+                rows = html_soup.select('table tr')[1:11]
+                for idx, row in enumerate(rows):
+                    cols = row.find_all('td')
+                    if len(cols) >= 2:
+                        url_tag = cols[1].find('a')
+                        links.append({
+                            'title': cols[0].get_text(strip=True) or f'Phish #{idx+1}',
+                            'url': url_tag['href'] if url_tag and url_tag.get('href') else cols[1].get_text(strip=True),
+                            'date': cols[2].get_text(strip=True) if len(cols) > 2 else 'N/A'
+                        })
+            except Exception as html_err:
+                print(f"PhishTank HTML scrape failed: {html_err}")
+
+        return links if links else [{'message': 'No phishing links data available'}]
+    except Exception as e:
+        print(f"Error fetching PhishTank links: {e}")
+        return [{'message': 'Unable to fetch data from PhishTank. Please try again later.'}]
+
+def fetch_phishing_news():
+    """Fetch latest news about phishing using NewsAPI"""
+    try:
+        if not NEWSAPI_KEY:
+            return [{'message': 'NewsAPI key not configured. Please set NEWSAPI_KEY environment variable.'}]
+        
+        url = 'https://newsapi.org/v2/everything'
+        params = {
+            'q': 'phishing OR scam OR cybercrime',
+            'sortBy': 'publishedAt',
+            'language': 'en',
+            'pageSize': 10,
+            'apiKey': NEWSAPI_KEY
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data.get('status') == 'ok':
+            articles = []
+            keywords = [
+                'phishing', 'cyber', 'ransomware', 'malware', 'scam', 'scams',
+                'scammer', 'scammers', 'fraud', 'credential', 'spoof', 'trojan',
+                'breach', 'data leak', 'cybercrime', 'cyber attack', 'cyberattack'
+            ]
+            for article in data.get('articles', [])[:10]:
+                title = (article.get('title') or '').lower()
+                desc = (article.get('description') or '').lower()
+                if any(k in title or k in desc for k in keywords):
+                    articles.append({
+                        'title': article.get('title', 'N/A'),
+                        'description': article.get('description', 'N/A'),
+                        'url': article.get('url', '#'),
+                        'source': article.get('source', {}).get('name', 'N/A'),
+                        'image': article.get('urlToImage', ''),
+                        'publishedAt': article.get('publishedAt', 'N/A')
+                    })
+            return articles if articles else [{'message': 'No recent cybersecurity/phishing news found'}]
+        else:
+            return [{'message': 'Unable to fetch news. Please try again later.'}]
+    except Exception as e:
+        print(f"Error fetching news: {e}")
+        return [{'message': 'Unable to fetch news. Please try again later.'}]
 
 class ScanRequest(BaseModel):
     url: str
@@ -259,6 +436,21 @@ async def get_history():
     except Exception as e:
         print(f"Error fetching history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/trends/openphish")
+async def get_openphish_trends():
+    """Get trending phishing targets from OpenPhish"""
+    return {"data": fetch_openphish_trends()}
+
+@app.get("/api/trends/phishtank")
+async def get_phishtank_links():
+    """Get top phishing links from PhishTank"""
+    return {"data": fetch_phishtank_links()}
+
+@app.get("/api/news")
+async def get_phishing_news():
+    """Get latest phishing/scam/cybercrime news"""
+    return {"data": fetch_phishing_news()}
 
 if __name__ == "__main__":
     import uvicorn

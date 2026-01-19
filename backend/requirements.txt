@@ -8,3 +8,7 @@ joblib
 scikit-learn
 supabase
 pandas
+requests
+beautifulsoup4
+lxml
+python-dotenv
