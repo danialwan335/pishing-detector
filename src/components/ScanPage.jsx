@@ -88,19 +88,10 @@ const ScanPage = () => {
     };
 
     return (
-        <div className='bg-black min-h-screen text-white'>
+        <div className='bg-gradient-to-br from-gray-900 via-purple-900 to-black min-h-screen text-white'>
             <Navbar />
 
-            {/* Background Overlay */}
-            <div className="fixed top-0 left-0 w-full h-full z-0">
-                <img
-                    src="/background.png"
-                    alt="Background"
-                    className="w-full h-full object-cover opacity-20"
-                />
-            </div>
-
-            <div className='relative z-10 max-w-[800px] w-full mx-auto px-4 pt-24'>
+            <div className='max-w-[800px] w-full mx-auto px-4 pt-24'>
                 <div className='text-center mb-10'>
                     <h2 className='text-3xl md:text-5xl font-bold text-white mb-4'>Scan for Threats</h2>
                     <p className='text-gray-400 text-lg'>Analyze URLs, QR codes, or email content for phishing attempts.</p>

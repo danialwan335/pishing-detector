@@ -1,0 +1,14 @@
+Before running `yarn start`:
+
+0. Install dependencies (first time only):
+   - Frontend: yarn install
+   - Backend: cd backend; pip install -r requirements.txt; cd ..
+
+1. Navigate to backend:
+   cd backend
+
+2. Update phishing volume data:
+   python fetch_openphish.py
+
+3. Start:
+   yarn start

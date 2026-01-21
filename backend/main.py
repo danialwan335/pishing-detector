@@ -1,4 +1,7 @@
 import joblib
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, func, distinct
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import numpy as np
 import os
 import time
@@ -16,7 +19,46 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# SQLite DB setup (can be replaced with Postgres etc.)
+DB_URL = os.getenv("PHISHING_DB_URL", "sqlite:///phishing_stats.db")
+import os.path
+print(f"[DEBUG] Using DB file: {os.path.abspath(DB_URL.split('///')[-1])}")
+engine = create_engine(DB_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Models
+class PhishingFeed(Base):
+    __tablename__ = "phishing_feeds"
+    id = Column(Integer, primary_key=True, index=True)
+    url = Column(String, index=True)
+    fetched_at = Column(DateTime, index=True)
+
+class DeliveryMethodStat(Base):
+    __tablename__ = "delivery_method_stats"
+    id = Column(Integer, primary_key=True, index=True)
+    method = Column(String, index=True)
+    percentage = Column(Float)
+    source = Column(String)
+    report_date = Column(DateTime)
+
+# Create tables
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(title="Pishing Detector API")
+# Startup check for delivery method stats
+def check_delivery_stats():
+    db = SessionLocal()
+    rows = db.query(DeliveryMethodStat).all()
+    db.close()
+    if not rows:
+        print("[WARNING] delivery_method_stats table is empty. Run seed_delivery_stats.py to populate.")
+    else:
+        print(f"[INFO] delivery_method_stats table has {len(rows)} rows.")
+        for r in rows:
+            print(f"[DEBUG] Row: id={r.id}, method={r.method}, percentage={r.percentage}, source={r.source}, report_date={r.report_date}")
+
+check_delivery_stats()
 
 # Supabase Configuration (set via environment variables)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -451,6 +493,33 @@ async def get_phishtank_links():
 async def get_phishing_news():
     """Get latest phishing/scam/cybercrime news"""
     return {"data": fetch_phishing_news()}
+
+# API: Phishing Volume Over Time
+@app.get("/api/stats/phishing-volume")
+def phishing_volume():
+    db = SessionLocal()
+    results = db.query(
+        func.date(PhishingFeed.fetched_at).label("date"),
+        func.count(distinct(PhishingFeed.url)).label("count")
+    ).group_by(func.date(PhishingFeed.fetched_at)).order_by(func.date(PhishingFeed.fetched_at)).all()
+    db.close()
+    return [{"date": r.date, "count": r.count} for r in results]
+
+# API: Delivery Method Statistics
+@app.get("/api/stats/delivery-methods")
+def delivery_methods():
+    db = SessionLocal()
+    results = db.query(DeliveryMethodStat).order_by(DeliveryMethodStat.percentage.desc()).all()
+    db.close()
+    return [
+        {
+            "method": r.method,
+            "percentage": r.percentage,
+            "source": r.source,
+            "report_date": r.report_date
+        }
+        for r in results
+    ]
 
 if __name__ == "__main__":
     import uvicorn
